@@ -8,16 +8,9 @@ import torch
 import torch.nn as nn
 
 import numpy as np
-from utils import Args, EarlyStopping_unlearning, load_pretrained_model
-from losses.confusion_loss import confusion_loss
-from losses.DANN_loss import DANN_loss
+from utils import Args
 import torch.optim as optim
-from train_utils import unlearn_predict
 from torch.autograd import Variable
-
-
-import sys
-
 ########################################################################################################################
 # Create an args class
 args = Args()
@@ -29,8 +22,8 @@ args.alpha = 1
 args.patience = 50
 args.learning_rate = 1e-4
 
-LOAD_PATH_ENCODER = '/gpfs0/well/win/users/ndinsdale/unlearning/weights/normal_model_encoder_split_checkpoint_whitehall_oasis_biobank'
-LOAD_PATH_REGRESSOR = '/gpfs0/well/win/users/ndinsdale/unlearning/weights/normal_model_regressor_split_checkpoint_whitehall_oasis_biobank'
+LOAD_PATH_ENCODER = 'age_pred_encoder_checkpoint'
+LOAD_PATH_REGRESSOR =  'age_pred_regressor_checkpoint'
 
 cuda = torch.cuda.is_available()
 if cuda:
@@ -40,16 +33,13 @@ if cuda:
 ########################################################################################################################
 im_size = (128, 128, 32)
 
-X_test_biobank = np.random.rand(1, 1, 128, 128, 32)
-X_test_biobank = X_test_biobank / np.percentile(X_test_biobank, 99)
-X_test_biobank = X_test_biobank - np.mean(X_test_biobank)
-y_test_biobank = np.array(0).reshape(-1, 1)
+X = np.random.rand(1, 1, 128, 128, 32)
+X = X - np.mean(X)
+y = np.array(0).reshape(-1, 1)
 print('Creating datasets and dataloaders')
-b_test_dataset = numpy_dataset(X_test_biobank, y_test_biobank)
-#o_test_dataset = numpy_dataset(X_test_oasis, y_test_oasis)
 
+b_test_dataset = numpy_dataset(X, y)
 b_test_dataloader = DataLoader(b_test_dataset, batch_size=int(args.batch_size), shuffle=True, num_workers=0)
-#o_test_dataloader = DataLoader(o_test_dataset, batch_size=int(args.batch_size), shuffle=True, num_workers=0)
 
 # Load the models
 encoder = Encoder()
@@ -84,7 +74,7 @@ optimizer = optim.Adam(list(encoder.parameters()) + list(regressor.parameters())
 
 models = [encoder, regressor]
 
-print('Predict Biobank')
+print('Predict Random')
 
 age_results = []
 age_true = []
@@ -105,52 +95,5 @@ with torch.no_grad():
             print(age_preds)
             age_results.append(age_preds.detach().cpu().numpy())
 age_results = np.array(age_results)
-age_results_cp = np.copy(age_results)
-del age_results
-age_true = np.array(age_true)
-age_true_cp = np.copy(age_true)
-del age_true
-embeddings = np.array(embeddings)
-embeddings_cp = np.copy(embeddings)
-del embeddings
 
-'''
-np.save('/gpfs0/well/win/users/ndinsdale/unlearning/perceptual_loss/biobank_age_preds', age_results_cp)
-np.save('/gpfs0/well/win/users/ndinsdale/unlearning/perceptual_loss/biobank_age_true', age_true_cp)
-np.save('/gpfs0/well/win/users/ndinsdale/unlearning/perceptual_loss/biobank_embeddings', embeddings_cp)
-
-print('Predict Oasis')
-
-age_results = []
-age_true = []
-embeddings = []
-encoder.eval()
-regressor.eval()
-
-with torch.no_grad():
-    for data, target in o_test_dataloader:
-        if cuda:
-            data, target = data.cuda(), target.cuda()
-        data, target = Variable(data), Variable(target)
-        if list(data.size())[0] == args.batch_size:
-            age_true.append(target.detach().cpu().numpy())
-            features = encoder(data)
-            embeddings.append(features.detach().cpu().numpy())
-            age_preds = regressor(features)
-            age_results.append(age_preds.detach().cpu().numpy())
-age_results = np.array(age_results)
-age_results_cp = np.copy(age_results)
-del age_results
-age_true = np.array(age_true)
-age_true_cp = np.copy(age_true)
-del age_true
-embeddings = np.array(embeddings)
-embeddings_cp = np.copy(embeddings)
-del embeddings
-
-np.save('/gpfs0/well/win/users/ndinsdale/unlearning/perceptual_loss/oasis_age_preds', age_results_cp)
-np.save('/gpfs0/well/win/users/ndinsdale/unlearning/perceptual_loss/oasis_age_true', age_true_cp)
-np.save('/gpfs0/well/win/users/ndinsdale/unlearning/perceptual_loss/oasis_embeddings', embeddings_cp)
-
-'''
 
