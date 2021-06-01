@@ -40,10 +40,10 @@ im_size = (128, 128, 32)
 X_test = np.load('X_test.npy')
 y_test = np.load('y_test.npy')
 
-print('Oasis shape: ', X_test.shape, flush=True)
+print('Data shape: ', X_test.shape, flush=True)
 if args.channels_first:
     X_test = np.transpose(X_test, (0, 4, 1, 2, 3))
-    print('Oasis Data shape: ', X_test.shape)
+    print('Data shape: ', X_test.shape)
 
 o_test_dataset = numpy_dataset(X_test, y_test)
 o_test_dataloader = DataLoader(o_test_dataset, batch_size=int(args.batch_size), shuffle=True, num_workers=0)
